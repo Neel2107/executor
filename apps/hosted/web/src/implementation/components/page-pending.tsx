@@ -105,10 +105,7 @@ export function UnknownPagePending({ fullScreen = false }: { readonly fullScreen
  * known about a page this does not name, so it stays blank instead of guessing; outside an
  * organization that is the whole screen.
  */
-export function PagePending({
-  pathname: destination,
-  organizationSettings,
-}: { readonly pathname?: string; readonly organizationSettings?: ReactNode } = {}) {
+export function PagePending({ pathname: destination }: { readonly pathname?: string } = {}) {
   const location = useLocation();
   const pathname = destination ?? location.pathname;
   const search = location.search;
@@ -143,8 +140,7 @@ export function PagePending({
       />
     );
   if (page === "accounts" && item === undefined) return <InventoryPageSkeleton kind="accounts" />;
-  if (page === "organization")
-    return <OrganizationSettingsPending>{organizationSettings}</OrganizationSettingsPending>;
+  if (page === "organization") return <OrganizationSettingsPending />;
   if (page === "approvals")
     return item === undefined ? (
       <ApprovalsPending />

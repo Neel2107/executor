@@ -1,8 +1,20 @@
 import { DisabledTooltip } from "@executor-js/ui/components/disabled-tooltip";
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Upload01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Upload01Icon, Cancel01Icon, Edit02Icon } from "@hugeicons/core-free-icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@executor-js/ui/components/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@executor-js/ui/components/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@executor-js/ui/components/tooltip";
 
 /** Shared file-picker view; its caller owns validation, draft state, and persistence. */
 export function IconPicker({
@@ -74,6 +86,101 @@ export function IconPicker({
           </button>
         </DisabledTooltip>
       )}
+    </div>
+  );
+}
+
+/**
+ * A settings row's icon. Hovering shows that it can be changed; a click offers the change or its
+ * removal, or opens the file picker when there is no icon to remove. Its caller owns validation
+ * and persistence.
+ */
+export function IconPickerMenu({
+  name,
+  preview,
+  label,
+  disabled,
+  disabledReason,
+  onSelect,
+  onRemove,
+}: {
+  readonly name: string;
+  readonly preview: string | null;
+  readonly label: string;
+  readonly disabled: boolean;
+  readonly disabledReason?: string | undefined;
+  readonly onSelect: (file: File) => void | Promise<void>;
+  readonly onRemove: () => void | Promise<void>;
+}) {
+  const picker = useRef<HTMLInputElement>(null);
+  const locked = disabled || disabledReason !== undefined;
+  const hint = preview === null ? "Upload icon" : "Change icon";
+  const trigger = (
+    <button
+      type="button"
+      className="group/icon relative block size-9 cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4 disabled:cursor-default"
+      aria-label={label}
+      disabled={locked}
+      onClick={preview === null ? () => picker.current?.click() : undefined}
+    >
+      <Avatar className="size-9">
+        <AvatarImage src={preview ?? undefined} alt="" />
+        <AvatarFallback>{name.slice(0, 1).toUpperCase()}</AvatarFallback>
+      </Avatar>
+      {/* The icon stays visible under the pencil, and the open menu replaces the prompt. */}
+      <span
+        className="absolute inset-0 grid place-items-center rounded-full bg-black/55 text-white opacity-0 transition-opacity duration-120 group-hover/icon:opacity-100 group-focus-visible/icon:opacity-100 group-disabled/icon:opacity-0 group-aria-expanded/icon:opacity-0"
+        aria-hidden
+      >
+        <HugeiconsIcon icon={Edit02Icon} size={16} strokeWidth={2} />
+      </span>
+    </button>
+  );
+  const hinted = (control: ReactNode) => (
+    <TooltipProvider delayDuration={400}>
+      <Tooltip>
+        <TooltipTrigger asChild>{control}</TooltipTrigger>
+        <TooltipContent side="left" sideOffset={6}>
+          {hint}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+  return (
+    <div className="relative w-fit shrink-0">
+      {disabledReason !== undefined ? (
+        <DisabledTooltip reason={disabledReason}>{trigger}</DisabledTooltip>
+      ) : preview === null ? (
+        hinted(trigger)
+      ) : (
+        <DropdownMenu>
+          {hinted(<DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>)}
+          <DropdownMenuContent align="end" className="min-w-40">
+            <DropdownMenuItem onSelect={() => picker.current?.click()}>
+              <HugeiconsIcon icon={Edit02Icon} strokeWidth={2} aria-hidden />
+              Change icon
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onRemove}>
+              <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} aria-hidden />
+              Remove icon
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+      <input
+        ref={picker}
+        type="file"
+        className="sr-only"
+        tabIndex={-1}
+        aria-label="Choose image file"
+        accept="image/png,image/jpeg,image/webp"
+        disabled={locked}
+        onChange={async (event) => {
+          const file = event.currentTarget.files?.[0];
+          event.currentTarget.value = "";
+          if (file !== undefined) await onSelect(file);
+        }}
+      />
     </div>
   );
 }

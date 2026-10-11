@@ -8,7 +8,6 @@ import { Option } from "effect";
 import { AsyncResult, Atom } from "effect/reactivity";
 import { DeleteOrganization } from "../components/delete-organization.tsx";
 import { SsoSettings } from "../components/sso-settings.tsx";
-import { BillingSettings } from "../components/billing-settings.tsx";
 import { memberLimitAtom } from "../../contracts/billing.ts";
 
 /** Members cannot read billing, and cannot invite, so they never ask for the limit. */
@@ -46,7 +45,6 @@ function CloudOrganizationPage() {
       memberLimit={useMemberLimit()}
       footer={<DeleteOrganization />}
     >
-      <BillingSettings />
       {/* Only enterprise plans show this card, and its plan check calls the billing provider;
           the rest of the page does not wait for it. */}
       <Suspense fallback={null}>
@@ -56,7 +54,7 @@ function CloudOrganizationPage() {
   );
 }
 
-/** Cloud adds billing settings, the member limit and owner-only removal to the shared organization page. */
+/** Cloud adds single sign-on, the member limit and owner-only removal to the shared organization page. */
 export const Route = createFileRoute("/org/$organizationSlug/organization")({
   component: CloudOrganizationPage,
 });

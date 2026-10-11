@@ -44,12 +44,19 @@ import {
 } from "../../contracts/organization.ts";
 import { organizationError, useOrganization } from "./organization.tsx";
 
+/**
+ * One raised card holds the search, the invite action and the list, like the settings card above
+ * it. The search field sits inside the card, so its corners nest in the card's and do not sit
+ * beside a second frame.
+ */
+const membershipCardClass =
+  "membership-card flex flex-col rounded-[12px] border border-border bg-muted pt-1.5";
+
 /** The table geometry is shared by the members table and its loading skeleton. */
-const membershipPanelClass =
-  "membership-panel border border-border rounded-[10px] bg-background shadow-none overflow-hidden";
+const membershipPanelClass = "membership-panel px-2 pb-2";
 
 const membershipTableClass =
-  "membership-table w-full [table-layout:fixed] [border-collapse:collapse] text-left text-[13px] [&_th]:h-10.5 [&_th]:py-[7px] [&_th]:px-[16px] [&_th]:text-[12px] [&_th]:font-normal [&_th]:text-muted-foreground [&_td]:h-15 [&_td]:py-[10px] [&_td]:px-[16px] [&_td]:wrap-anywhere [&_tbody_tr]:[transition:background_120ms] [&_tbody_tr:hover]:[background:color-mix(in_srgb,_var(--foreground)_3%,_transparent)] [&_tbody_tr_+_tr]:border-t [&_tbody_tr_+_tr]:border-t-border [&_.membership-email]:w-[32%] [&_.membership-email]:text-muted-foreground [&_.membership-role]:w-45 [&_.membership-actions]:w-15 [&_.membership-actions]:pl-1 [&_.membership-actions]:pr-4 [&_.membership-actions]:text-right max-[800px]:[&_.membership-email]:hidden max-[800px]:[&_.membership-role]:w-35 max-[480px]:[&_th]:py-[10px] max-[480px]:[&_th]:px-[12px] max-[480px]:[&_td]:py-[10px] max-[480px]:[&_td]:px-[12px] max-[480px]:[&_.membership-role]:w-31 max-[480px]:[&_.membership-role]:pl-1 max-[480px]:[&_.membership-role]:pr-1 max-[480px]:[&_.membership-actions]:w-10.5 max-[480px]:[&_.membership-actions]:py-0 max-[480px]:[&_.membership-actions]:px-[4px]";
+  "membership-table w-full [table-layout:fixed] [border-collapse:separate] [border-spacing:0] text-left text-[13px] [&_th]:h-10.5 [&_th]:py-[7px] [&_th]:px-[16px] [&_th]:text-[12px] [&_th]:font-normal [&_th]:text-muted-foreground [&_th:first-child]:pl-2 [&_td:first-child]:pl-2 [&_td]:h-15 [&_td]:py-[10px] [&_td]:px-[16px] [&_td]:wrap-anywhere [&_tbody_td]:[transition:background_120ms] [&_tbody_tr:hover_td]:[background:color-mix(in_srgb,_var(--foreground)_3%,_transparent)] [&_tbody_td:first-child]:rounded-l-md [&_tbody_td:last-child]:rounded-r-md [&_.membership-email]:w-[32%] [&_.membership-email]:text-muted-foreground [&_.membership-role]:w-45 [&_.membership-actions]:w-15 [&_.membership-actions]:pl-1 [&_.membership-actions]:pr-2 [&_.membership-actions]:text-right max-[800px]:[&_.membership-email]:hidden max-[800px]:[&_.membership-role]:w-35 max-[480px]:[&_th]:py-[10px] max-[480px]:[&_th]:px-[12px] max-[480px]:[&_td]:py-[10px] max-[480px]:[&_td]:px-[12px] max-[480px]:[&_.membership-role]:w-31 max-[480px]:[&_.membership-role]:pl-1 max-[480px]:[&_.membership-role]:pr-1 max-[480px]:[&_.membership-actions]:w-10.5 max-[480px]:[&_.membership-actions]:py-0 max-[480px]:[&_.membership-actions]:px-[4px]";
 
 const membershipInvitationsClass =
   "membership-has-invitations [&_.membership-actions]:w-48 max-[480px]:[&_.membership-actions]:w-25.5 max-[480px]:[&_.membership-actions]:pr-1.5 max-[480px]:[&_.membership-actions_button]:py-0 max-[480px]:[&_.membership-actions_button]:px-[6px] max-[480px]:[&_.membership-actions_button]:text-[12px] max-[480px]:[&_.membership-actions_button]:min-h-10";
@@ -187,325 +194,331 @@ export function OrganizationMembers({
             </span>
           )}
         </h2>
-        <div className="membership-toolbar flex items-center justify-between gap-4 [&_.search-input]:flex-1 [&_.search-input]:max-w-130 [&_.search-input]:w-auto [&_.search-input_input]:h-9 [&_.search-input_input]:border-input [&_.search-input_input]:rounded-[6px] [&_.search-input_input]:bg-transparent [&_.search-input_>_svg]:top-2.75 [&_>_button]:h-9 [&_>_button]:rounded-[6px] [&_>_button]:text-[12px] [&_>_button]:bg-transparent [&_>_button]:shadow-none max-[480px]:gap-2.5 max-[480px]:[&_.search-input_input]:h-10.5 max-[480px]:[&_.search-input_input]:text-[14px] max-[480px]:[&_.search-input_>_svg]:top-3.5 max-[480px]:[&_>_button]:min-h-10.5 max-[480px]:[&_>_button]:py-0 max-[480px]:[&_>_button]:px-[12px]">
-          <SearchInput placeholder="Search by name or email…" value={search} onChange={setSearch} />
-          {admin ? (
-            <Dialog
-              open={invitationOpen}
-              onOpenChange={(open) => {
-                if (inviting.waiting) return;
-                setInvitationOpen(open);
-                setError(null);
-                if (open) setSent(null);
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  Add member
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="membership-invite-dialog max-h-[calc(100dvh_-_32px)] overflow-y-auto [&_.settings-form]:[margin:4px_0_0] [&_.settings-form]:max-w-none">
-                {sent ? (
-                  <InvitationSent
-                    sent={sent}
-                    emailInvitations={emailInvitations}
-                    onInviteAnother={() => {
-                      setError(null);
-                      setSent(null);
-                    }}
-                    onDone={closeInvitation}
-                  />
-                ) : limitReached ? (
-                  <MemberLimitReached
-                    organization={organization.name}
-                    {...limitReached}
-                    onCancel={closeInvitation}
-                  />
-                ) : (
-                  <>
-                    <DialogTitle>Add member</DialogTitle>
-                    <DialogDescription>Invite someone to {organization.name}.</DialogDescription>
-                    <form
-                      className="settings-form [&_h2]:text-[15px] [&_h2]:font-medium flex flex-col gap-4 w-full max-w-100 mt-7 [&_label]:flex [&_label]:flex-col [&_label]:gap-1.5 [&_label]:text-[13px] [&_>_button]:self-start"
-                      onSubmit={async (event) => {
-                        event.preventDefault();
-                        const form = new FormData(event.currentTarget);
-                        await sendInvite(
-                          String(form.get("email")).trim(),
-                          form.get("role") === "admin" ? "admin" : "member",
-                          false,
-                        );
-                      }}
-                    >
-                      <label>
-                        Email
-                        <Input
-                          name="email"
-                          type="email"
-                          placeholder="name@example.com"
-                          required
-                          autoFocus
-                          disabled={inviting.waiting}
-                        />
-                      </label>
-                      <label>
-                        Role
-                        <Select name="role" defaultValue="member" disabled={inviting.waiting}>
-                          <SelectTrigger aria-label="Invitation role" className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="member">Member</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </label>
-                      {error && (
-                        <p className="auth-error text-destructive text-[13px]" role="alert">
-                          {error}
-                        </p>
-                      )}
-                      <DialogFooter>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          disabled={inviting.waiting}
-                          onClick={closeInvitation}
-                        >
-                          Cancel
-                        </Button>
-                        <Button loading={inviting.waiting}>
-                          {emailInvitations ? "Send invitation" : "Create invite link"}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </>
-                )}
-              </DialogContent>
-            </Dialog>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              disabledReason="Only organization owners and admins can invite members."
-            >
-              Add member
-            </Button>
-          )}
-        </div>
-
-        <QueryResult
-          result={members}
-          Failure={MembersFailure}
-          retry={retry}
-          pending={<MembersSkeleton />}
-        >
-          {() => (
-            <div className={membershipPanelClass}>
-              <table
-                className={`${membershipTableClass}${admin && pending?.length ? ` ${membershipInvitationsClass}` : ""}`}
-                aria-label="Members"
+        <div className={membershipCardClass}>
+          <div className="membership-toolbar mx-4 flex items-center justify-between gap-4 border-b border-border py-2.5 [&_.search-input]:flex-1 [&_.search-input]:max-w-130 [&_.search-input]:w-auto [&_.search-input_input]:h-9 [&_.search-input_input]:border-input [&_.search-input_input]:rounded-[6px] [&_.search-input_input]:bg-transparent [&_.search-input_>_svg]:top-2.75 [&_>_button]:h-9 [&_>_button]:rounded-[6px] [&_>_button]:text-[12px] [&_>_button]:bg-transparent [&_>_button]:shadow-none max-[480px]:gap-2.5 max-[480px]:[&_.search-input_input]:h-10.5 max-[480px]:[&_.search-input_input]:text-[14px] max-[480px]:[&_.search-input_>_svg]:top-3.5 max-[480px]:[&_>_button]:min-h-10.5 max-[480px]:[&_>_button]:py-0 max-[480px]:[&_>_button]:px-[12px]">
+            <SearchInput
+              placeholder="Search by name or email…"
+              value={search}
+              onChange={setSearch}
+            />
+            {admin ? (
+              <Dialog
+                open={invitationOpen}
+                onOpenChange={(open) => {
+                  if (inviting.waiting) return;
+                  setInvitationOpen(open);
+                  setError(null);
+                  if (open) setSent(null);
+                }}
               >
-                <thead>
-                  <tr>
-                    <th scope="col" aria-sort={descending ? "descending" : "ascending"}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="membership-sort -ml-2.5 py-0 px-[10px] text-foreground text-[12px] font-normal bg-transparent"
-                        onClick={() => setDescending((value) => !value)}
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Add member
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="membership-invite-dialog max-h-[calc(100dvh_-_32px)] overflow-y-auto [&_.settings-form]:[margin:4px_0_0] [&_.settings-form]:max-w-none">
+                  {sent ? (
+                    <InvitationSent
+                      sent={sent}
+                      emailInvitations={emailInvitations}
+                      onInviteAnother={() => {
+                        setError(null);
+                        setSent(null);
+                      }}
+                      onDone={closeInvitation}
+                    />
+                  ) : limitReached ? (
+                    <MemberLimitReached
+                      organization={organization.name}
+                      {...limitReached}
+                      onCancel={closeInvitation}
+                    />
+                  ) : (
+                    <>
+                      <DialogTitle>Add member</DialogTitle>
+                      <DialogDescription>Invite someone to {organization.name}.</DialogDescription>
+                      <form
+                        className="settings-form [&_h2]:text-[15px] [&_h2]:font-medium flex flex-col gap-4 w-full max-w-100 mt-7 [&_label]:flex [&_label]:flex-col [&_label]:gap-1.5 [&_label]:text-[13px] [&_>_button]:self-start"
+                        onSubmit={async (event) => {
+                          event.preventDefault();
+                          const form = new FormData(event.currentTarget);
+                          await sendInvite(
+                            String(form.get("email")).trim(),
+                            form.get("role") === "admin" ? "admin" : "member",
+                            false,
+                          );
+                        }}
                       >
-                        Name
-                        <HugeiconsIcon
-                          icon={descending ? ArrowDown01Icon : ArrowUp01Icon}
-                          size={14}
-                          aria-hidden
-                        />
-                      </Button>
-                    </th>
-                    <th scope="col" className="membership-email">
-                      Email
-                    </th>
-                    <th
-                      scope="col"
-                      className="membership-role [&_[data-slot='select-trigger']]:w-full [&_[data-slot='select-trigger']]:border-input [&_[data-slot='select-trigger']]:rounded-[6px] [&_[data-slot='select-trigger']]:bg-transparent [&_[data-slot='select-trigger']]:shadow-none max-[480px]:[&_[data-slot='select-trigger']]:min-h-10"
-                    >
-                      Role
-                    </th>
-                    <th scope="col" className="membership-actions">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => {
-                    const member = "member" in row ? row.member : undefined;
-                    const invitation = "invitation" in row ? row.invitation : undefined;
-                    return (
-                      <tr key={row.id}>
-                        <td>
-                          <div className="membership-person flex items-center gap-2.5 min-w-0 [&_[data-slot='avatar']]:w-7 [&_[data-slot='avatar']]:h-7 [&_[data-slot='avatar']]:shrink-0 [&_[data-slot='avatar-fallback']]:bg-input [&_[data-slot='avatar-fallback']]:text-[10px] max-[480px]:items-start max-[480px]:gap-2 max-[480px]:[&_[data-slot='avatar']]:w-6 max-[480px]:[&_[data-slot='avatar']]:h-6">
-                            <MemberAvatar name={row.name} image={member?.user.image ?? null} />
-                            <div className="membership-identity min-w-0">
-                              <div className="membership-person-name flex flex-wrap items-center gap-[6px_8px]">
-                                {invitation ? (
-                                  <span className="membership-invitation-status py-[2px] px-[6px] border border-border rounded-[4px] text-muted-foreground text-[11px]">
-                                    {/* oxlint-disable-next-line react/purity -- expiry is compared against the render time */}
-                                    {new Date(invitation.expiresAt).getTime() <= Date.now()
-                                      ? "Expired invite"
-                                      : "Invited"}
-                                  </span>
-                                ) : (
-                                  <span>{row.name}</span>
-                                )}
-                                {member && member.userId === userId && (
-                                  <span className="membership-you text-muted-foreground text-[11px]">
-                                    You
-                                  </span>
-                                )}
+                        <label>
+                          Email
+                          <Input
+                            name="email"
+                            type="email"
+                            placeholder="name@example.com"
+                            required
+                            autoFocus
+                            disabled={inviting.waiting}
+                          />
+                        </label>
+                        <label>
+                          Role
+                          <Select name="role" defaultValue="member" disabled={inviting.waiting}>
+                            <SelectTrigger aria-label="Invitation role" className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="member">Member</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </label>
+                        {error && (
+                          <p className="auth-error text-destructive text-[13px]" role="alert">
+                            {error}
+                          </p>
+                        )}
+                        <DialogFooter>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={inviting.waiting}
+                            onClick={closeInvitation}
+                          >
+                            Cancel
+                          </Button>
+                          <Button loading={inviting.waiting}>
+                            {emailInvitations ? "Send invitation" : "Create invite link"}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </>
+                  )}
+                </DialogContent>
+              </Dialog>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                disabledReason="Only organization owners and admins can invite members."
+              >
+                Add member
+              </Button>
+            )}
+          </div>
+
+          <QueryResult
+            result={members}
+            Failure={MembersFailure}
+            retry={retry}
+            pending={<MembersSkeleton />}
+          >
+            {() => (
+              <div className={membershipPanelClass}>
+                <table
+                  className={`${membershipTableClass}${admin && pending?.length ? ` ${membershipInvitationsClass}` : ""}`}
+                  aria-label="Members"
+                >
+                  <thead>
+                    <tr>
+                      <th scope="col" aria-sort={descending ? "descending" : "ascending"}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="membership-sort -ml-2.5 py-0 px-[10px] text-foreground text-[12px] font-normal bg-transparent"
+                          onClick={() => setDescending((value) => !value)}
+                        >
+                          Name
+                          <HugeiconsIcon
+                            icon={descending ? ArrowDown01Icon : ArrowUp01Icon}
+                            size={14}
+                            aria-hidden
+                          />
+                        </Button>
+                      </th>
+                      <th scope="col" className="membership-email">
+                        Email
+                      </th>
+                      <th
+                        scope="col"
+                        className="membership-role [&_[data-slot='select-trigger']]:w-full [&_[data-slot='select-trigger']]:border-input [&_[data-slot='select-trigger']]:rounded-[6px] [&_[data-slot='select-trigger']]:bg-transparent [&_[data-slot='select-trigger']]:shadow-none max-[480px]:[&_[data-slot='select-trigger']]:min-h-10"
+                      >
+                        Role
+                      </th>
+                      <th scope="col" className="membership-actions">
+                        <span className="sr-only">Actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => {
+                      const member = "member" in row ? row.member : undefined;
+                      const invitation = "invitation" in row ? row.invitation : undefined;
+                      return (
+                        <tr key={row.id}>
+                          <td>
+                            <div className="membership-person flex items-center gap-2.5 min-w-0 [&_[data-slot='avatar']]:w-7 [&_[data-slot='avatar']]:h-7 [&_[data-slot='avatar']]:shrink-0 [&_[data-slot='avatar-fallback']]:bg-input [&_[data-slot='avatar-fallback']]:text-[10px] max-[480px]:items-start max-[480px]:gap-2 max-[480px]:[&_[data-slot='avatar']]:w-6 max-[480px]:[&_[data-slot='avatar']]:h-6">
+                              <MemberAvatar name={row.name} image={member?.user.image ?? null} />
+                              <div className="membership-identity min-w-0">
+                                <div className="membership-person-name flex flex-wrap items-center gap-[6px_8px]">
+                                  {invitation ? (
+                                    <span className="membership-invitation-status py-[2px] px-[6px] border border-border rounded-[4px] text-muted-foreground text-[11px]">
+                                      {/* oxlint-disable-next-line react/purity -- expiry is compared against the render time */}
+                                      {new Date(invitation.expiresAt).getTime() <= Date.now()
+                                        ? "Expired invite"
+                                        : "Invited"}
+                                    </span>
+                                  ) : (
+                                    <span>{row.name}</span>
+                                  )}
+                                  {member && member.userId === userId && (
+                                    <span className="membership-you text-muted-foreground text-[11px]">
+                                      You
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="membership-mobile-email hidden max-[800px]:block max-[800px]:mt-0.75 max-[800px]:text-[12px] max-[800px]:text-muted-foreground max-[800px]:wrap-anywhere">
+                                  {row.email}
+                                </span>
                               </div>
-                              <span className="membership-mobile-email hidden max-[800px]:block max-[800px]:mt-0.75 max-[800px]:text-[12px] max-[800px]:text-muted-foreground max-[800px]:wrap-anywhere">
-                                {row.email}
-                              </span>
                             </div>
-                          </div>
-                        </td>
-                        <td className="membership-email">{row.email}</td>
-                        <td className="membership-role [&_[data-slot='select-trigger']]:w-full [&_[data-slot='select-trigger']]:border-input [&_[data-slot='select-trigger']]:rounded-[6px] [&_[data-slot='select-trigger']]:bg-transparent [&_[data-slot='select-trigger']]:shadow-none max-[480px]:[&_[data-slot='select-trigger']]:min-h-10">
-                          {admin && member && member.role !== "owner" ? (
-                            <Select
-                              value={member.role}
-                              disabled={changingRole.waiting}
-                              onValueChange={async (role) => {
-                                if (role !== "admin" && role !== "member") return;
-                                setError(null);
-                                const result = await changeRole({ memberId: member.id, role });
-                                if (Exit.isFailure(result))
-                                  setError(organizationError(result.cause));
-                              }}
-                            >
-                              <SelectTrigger aria-label={`Role for ${member.user.email}`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="member">Member</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : member ? (
-                            <DisabledTooltip
-                              className="w-full"
-                              reason={
-                                member.role === "owner"
-                                  ? "The organization owner’s role cannot be changed here."
-                                  : "Only organization owners and admins can change member roles."
-                              }
-                            >
-                              <Select value={member.role} disabled>
-                                <SelectTrigger
-                                  className="w-full"
-                                  aria-label={`Role for ${member.user.email}`}
-                                >
+                          </td>
+                          <td className="membership-email">{row.email}</td>
+                          <td className="membership-role [&_[data-slot='select-trigger']]:w-full [&_[data-slot='select-trigger']]:border-input [&_[data-slot='select-trigger']]:rounded-[6px] [&_[data-slot='select-trigger']]:bg-transparent [&_[data-slot='select-trigger']]:shadow-none max-[480px]:[&_[data-slot='select-trigger']]:min-h-10">
+                            {admin && member && member.role !== "owner" ? (
+                              <Select
+                                value={member.role}
+                                disabled={changingRole.waiting}
+                                onValueChange={async (role) => {
+                                  if (role !== "admin" && role !== "member") return;
+                                  setError(null);
+                                  const result = await changeRole({ memberId: member.id, role });
+                                  if (Exit.isFailure(result))
+                                    setError(organizationError(result.cause));
+                                }}
+                              >
+                                <SelectTrigger aria-label={`Role for ${member.user.email}`}>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="member">Member</SelectItem>
                                   <SelectItem value="admin">Admin</SelectItem>
-                                  <SelectItem value="owner">Owner</SelectItem>
                                 </SelectContent>
                               </Select>
-                            </DisabledTooltip>
-                          ) : (
-                            <span className="capitalize text-muted-foreground">{row.role}</span>
-                          )}
-                        </td>
-                        <td className="membership-actions">
-                          {invitation ? (
-                            <div className="membership-invite-actions flex items-center justify-end flex-wrap gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                disabled={inviting.waiting || revoking.waiting}
-                                onClick={async () => {
-                                  // The server refuses a resend at the limit too; offer the upgrade instead.
-                                  if (limitReached) {
-                                    setError(null);
-                                    setSent(null);
-                                    setInvitationOpen(true);
-                                  } else if (
-                                    invitation.role === "admin" ||
-                                    invitation.role === "member"
-                                  )
-                                    await sendInvite(invitation.email, invitation.role, true);
-                                }}
-                              >
-                                {emailInvitations ? "Resend" : "Get invite link"}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                disabled={inviting.waiting || revoking.waiting}
-                                aria-label={`Revoke invitation to ${invitation.email}`}
-                                title="Revoke invitation"
-                                className="membership-remove text-muted-foreground hover:text-destructive hover:[background:color-mix(in_srgb,_var(--destructive)_8%,_transparent)] max-[480px]:min-h-10"
-                                onClick={() => {
-                                  setError(null);
-                                  setRevocation({ id: invitation.id, email: invitation.email });
-                                }}
-                              >
-                                <HugeiconsIcon icon={Delete02Icon} size={17} aria-hidden />
-                              </Button>
-                            </div>
-                          ) : (
-                            member && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label={`Remove ${member.user.name || member.user.email}`}
-                                title="Remove member"
-                                disabledReason={
-                                  !admin
-                                    ? "Only organization owners and admins can remove members."
-                                    : member.role === "owner"
-                                      ? "The organization owner cannot be removed here."
-                                      : member.userId === userId
-                                        ? "You cannot remove yourself here."
-                                        : undefined
+                            ) : member ? (
+                              <DisabledTooltip
+                                className="w-full"
+                                reason={
+                                  member.role === "owner"
+                                    ? "The organization owner’s role cannot be changed here."
+                                    : "Only organization owners and admins can change member roles."
                                 }
-                                className="membership-remove text-muted-foreground hover:text-destructive hover:[background:color-mix(in_srgb,_var(--destructive)_8%,_transparent)] max-[480px]:min-h-10"
-                                onClick={() => {
-                                  setError(null);
-                                  setRemoval({
-                                    id: member.id,
-                                    name: member.user.name || member.user.email,
-                                  });
-                                }}
                               >
-                                <HugeiconsIcon icon={Delete02Icon} size={17} aria-hidden />
-                              </Button>
-                            )
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {rows.length === 0 && (
-                <div className="p-4">
-                  <EmptyState
-                    size="compact"
-                    title={search ? "No matching members" : "No members yet"}
-                  >
-                    {search
-                      ? "No members or invitations match your search."
-                      : "Invite someone to join this organization."}
-                  </EmptyState>
-                </div>
-              )}
-            </div>
-          )}
-        </QueryResult>
+                                <Select value={member.role} disabled>
+                                  <SelectTrigger
+                                    className="w-full"
+                                    aria-label={`Role for ${member.user.email}`}
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="member">Member</SelectItem>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="owner">Owner</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </DisabledTooltip>
+                            ) : (
+                              <span className="capitalize text-muted-foreground">{row.role}</span>
+                            )}
+                          </td>
+                          <td className="membership-actions">
+                            {invitation ? (
+                              <div className="membership-invite-actions flex items-center justify-end flex-wrap gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={inviting.waiting || revoking.waiting}
+                                  onClick={async () => {
+                                    // The server refuses a resend at the limit too; offer the upgrade instead.
+                                    if (limitReached) {
+                                      setError(null);
+                                      setSent(null);
+                                      setInvitationOpen(true);
+                                    } else if (
+                                      invitation.role === "admin" ||
+                                      invitation.role === "member"
+                                    )
+                                      await sendInvite(invitation.email, invitation.role, true);
+                                  }}
+                                >
+                                  {emailInvitations ? "Resend" : "Get invite link"}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled={inviting.waiting || revoking.waiting}
+                                  aria-label={`Revoke invitation to ${invitation.email}`}
+                                  title="Revoke invitation"
+                                  className="membership-remove text-muted-foreground hover:text-destructive hover:[background:color-mix(in_srgb,_var(--destructive)_8%,_transparent)] max-[480px]:min-h-10"
+                                  onClick={() => {
+                                    setError(null);
+                                    setRevocation({ id: invitation.id, email: invitation.email });
+                                  }}
+                                >
+                                  <HugeiconsIcon icon={Delete02Icon} size={17} aria-hidden />
+                                </Button>
+                              </div>
+                            ) : (
+                              member && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={`Remove ${member.user.name || member.user.email}`}
+                                  title="Remove member"
+                                  disabledReason={
+                                    !admin
+                                      ? "Only organization owners and admins can remove members."
+                                      : member.role === "owner"
+                                        ? "The organization owner cannot be removed here."
+                                        : member.userId === userId
+                                          ? "You cannot remove yourself here."
+                                          : undefined
+                                  }
+                                  className="membership-remove text-muted-foreground hover:text-destructive hover:[background:color-mix(in_srgb,_var(--destructive)_8%,_transparent)] max-[480px]:min-h-10"
+                                  onClick={() => {
+                                    setError(null);
+                                    setRemoval({
+                                      id: member.id,
+                                      name: member.user.name || member.user.email,
+                                    });
+                                  }}
+                                >
+                                  <HugeiconsIcon icon={Delete02Icon} size={17} aria-hidden />
+                                </Button>
+                              )
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {rows.length === 0 && (
+                  <div className="p-4">
+                    <EmptyState
+                      size="compact"
+                      title={search ? "No matching members" : "No members yet"}
+                    >
+                      {search
+                        ? "No members or invitations match your search."
+                        : "Invite someone to join this organization."}
+                    </EmptyState>
+                  </div>
+                )}
+              </div>
+            )}
+          </QueryResult>
+        </div>
       </div>
       {error && !removal && !revocation && !invitationOpen && (
         <p className="auth-error text-destructive text-[13px]" role="alert">
@@ -619,15 +632,17 @@ export function OrganizationMembersPending() {
         <h2 className="membership-heading flex items-baseline gap-2 text-[14px] font-medium">
           Members
         </h2>
-        <div className="membership-toolbar flex items-center justify-between gap-4 [&_.search-input]:flex-1 [&_.search-input]:max-w-130 [&_.search-input]:w-auto [&_.search-input_input]:h-9 [&_.search-input_input]:border-input [&_.search-input_input]:rounded-[6px] [&_.search-input_input]:bg-transparent [&_.search-input_>_svg]:top-2.75 [&_>_button]:h-9 [&_>_button]:rounded-[6px] [&_>_button]:text-[12px] [&_>_button]:bg-transparent [&_>_button]:shadow-none max-[480px]:gap-2.5 max-[480px]:[&_.search-input_input]:h-10.5 max-[480px]:[&_.search-input_input]:text-[14px] max-[480px]:[&_.search-input_>_svg]:top-3.5 max-[480px]:[&_>_button]:min-h-10.5 max-[480px]:[&_>_button]:py-0 max-[480px]:[&_>_button]:px-[12px]">
-          <fieldset disabled className="contents">
-            <SearchInput placeholder="Search by name or email…" value="" onChange={() => {}} />
-          </fieldset>
-          <Button variant="outline" size="sm" disabled>
-            Add member
-          </Button>
+        <div className={membershipCardClass}>
+          <div className="membership-toolbar mx-4 flex items-center justify-between gap-4 border-b border-border py-2.5 [&_.search-input]:flex-1 [&_.search-input]:max-w-130 [&_.search-input]:w-auto [&_.search-input_input]:h-9 [&_.search-input_input]:border-input [&_.search-input_input]:rounded-[6px] [&_.search-input_input]:bg-transparent [&_.search-input_>_svg]:top-2.75 [&_>_button]:h-9 [&_>_button]:rounded-[6px] [&_>_button]:text-[12px] [&_>_button]:bg-transparent [&_>_button]:shadow-none max-[480px]:gap-2.5 max-[480px]:[&_.search-input_input]:h-10.5 max-[480px]:[&_.search-input_input]:text-[14px] max-[480px]:[&_.search-input_>_svg]:top-3.5 max-[480px]:[&_>_button]:min-h-10.5 max-[480px]:[&_>_button]:py-0 max-[480px]:[&_>_button]:px-[12px]">
+            <fieldset disabled className="contents">
+              <SearchInput placeholder="Search by name or email…" value="" onChange={() => {}} />
+            </fieldset>
+            <Button variant="outline" size="sm" disabled>
+              Add member
+            </Button>
+          </div>
+          <MembersSkeleton />
         </div>
-        <MembersSkeleton />
       </div>
     </section>
   );
