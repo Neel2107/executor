@@ -9,6 +9,8 @@ import gmailLogo from "../../assets/logos/gmail.svg?url";
 import slackLogo from "../../assets/logos/slack.svg?url";
 import xLogo from "../../assets/logos/x.svg?url";
 import rhysAvatar from "../../assets/rhys-sullivan.jpg";
+import { appStructure } from "../../content/app-structure";
+import { homepageStory } from "../../content/site-copy";
 import { appHref } from "../../content/site-origin.ts";
 
 // The brand mark resolves against the build's base, so the docs build (mounted
@@ -30,13 +32,16 @@ const cur = (k: string) => (k === current ? "page" : undefined);
 const GH = "https://github.com/UsefulSoftwareCo/executor";
 const SIGN_IN = appHref("/login");
 
+// The index reads the same as the section headings it points at, minus the
+// closing full stop, so the two cannot drift apart.
+const label = (title: string) => title.replace(/\.$/, "");
 const sections = [
-  { id: "apps", label: "What’s an app" },
-  { id: "connect", label: "Start small" },
-  { id: "mission", label: "Build what you need" },
-  { id: "automate", label: "Keep it working" },
-  { id: "agents", label: "It's just code" },
-  { id: "install", label: "Run it" },
+  { id: "apps", label: label(homepageStory.apps.title) },
+  { id: "connect", label: label(homepageStory.start.title) },
+  { id: "mission", label: label(homepageStory.build.title) },
+  { id: "automate", label: label(homepageStory.automate.title) },
+  { id: "agents", label: label(appStructure.title) },
+  { id: "install", label: "Run it where you want" },
   { id: "people", label: "What people say" },
   { id: "pricing", label: "Pricing" },
   { id: "writing", label: "Writing" },

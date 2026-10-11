@@ -72,11 +72,11 @@ export const homepageStory = {
     body: "A tool your agent can call. An automation that runs on its own. An interface you can use. They can all be parts of the same app, built around what you need.",
   },
   start: {
-    title: "Start with something useful.",
+    title: "Start small.",
     body: "Bring a tool you already use, give your agent a skill, or ask it to build something you wish existed. Most apps start as one small piece.",
   },
   build: {
-    title: "Ask for what you actually need.",
+    title: "Ask for what you need.",
     body: "Executor is not an agent. It’s a place for your agent to build and run software.",
     prompt:
       "Pull together my signups and open issues. Give my agents one way to check what's changed.",
